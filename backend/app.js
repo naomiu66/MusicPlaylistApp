@@ -3,23 +3,15 @@ const cookieParser = require("cookie-parser");
 const logger = require("morgan");
 const cors = require("cors");
 const connectDb = require("./configs/mongodb");
-const session = require("express-session");
-const { RedisStore } = require("connect-redis");
-const redis = require("redis");
-
+const redis = require("./configs/redis");
 require("dotenv").config();
-const SESSION_SECRET = process.env.SESSION_SECRET;
-const REDIS_URL = process.env.REDIS_URL;
 
 connectDb();
 
-const redisClient = redis.createClient({
-  url: REDIS_URL,
-});
-
-redisClient.connect().catch(console.error);
+redis.connectRedis();
 
 const authRoutes = require("./routes/authRoutes");
+const userRoutes = require("./routes/userRoutes");
 
 const app = express();
 
@@ -34,21 +26,8 @@ app.use(
     credentials: true,
   }),
 );
-app.use(
-  session({
-    name: "sid",
-    store: new RedisStore({ client: redisClient }),
-    secret: SESSION_SECRET,
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-      httpOnly: true,
-      sameSite: "lax",
-      maxAge: 1000 * 60 * 60,
-    },
-  }),
-);
 
 app.use("/api/auth", authRoutes);
+app.use("/api/users", userRoutes);
 
 module.exports = app;
