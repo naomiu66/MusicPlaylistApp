@@ -11,6 +11,7 @@ connectDb();
 redis.connectRedis();
 
 const authRoutes = require("./routes/authRoutes");
+const musicRoutes = require("./routes/musicRoutes");
 const userRoutes = require("./routes/userRoutes");
 
 const app = express();
@@ -21,13 +22,14 @@ app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: "http://localhost:8081",
     methods: "*",
     credentials: true,
   }),
 );
 
 app.use("/api/auth", authRoutes);
+app.use("/api/music", musicRoutes);
 app.use("/api/users", userRoutes);
 
 module.exports = app;

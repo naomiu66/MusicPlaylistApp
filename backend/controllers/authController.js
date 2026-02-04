@@ -4,6 +4,7 @@ const redis = require("../configs/redis");
 const jwt = require("jsonwebtoken");
 const parseTTL = require("../utils/parseTTL");
 require("dotenv").config();
+const validator = require('validator');
 
 const REFRESH_TTL_S = parseTTL(process.env.REFRESH_EXPIRES_IN);
 const ACCESS_TTL_S = parseTTL(process.env.ACCESS_EXPIRES_IN);
@@ -17,6 +18,8 @@ const register = async (req, res) => {
     return res
       .status(400)
       .json({ message: "Required fields are not provided" });
+
+  if(!validator.isEmail(email)) return res.status(400).json({message: "Invalid email"});
 
   try {
     const existingUser = await usersService.getUserByEmail(email);
