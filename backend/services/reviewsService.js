@@ -1,6 +1,10 @@
 const Review = require("../models/Review");
 const ValidationError = require("../errors/ValidationError");
 const ForbiddenError = require("../errors/ForbiddenError");
+const CacheService = require("./cacheService");
+
+const TTL = 60 * 15;
+const reviewsCacheService = new CacheService("reviews:", TTL);
 
 module.exports = {
   async createReview(payload) {
@@ -27,6 +31,7 @@ module.exports = {
       throw new ValidationError("Rating must be a number between 1 and 5");
     }
 
+    await reviewsCacheService.invalidateForNamespace("getReviews");
     return await Review.create(payload);
   },
 
@@ -55,23 +60,43 @@ module.exports = {
       };
     }
 
+    const cacheParams = {
+      page,
+      limit,
+      artist,
+      title,
+    };
+
+    const cachedData = await reviewsCacheService.get("getReviews", cacheParams);
+    if(cachedData) return cachedData;
+
     const [reviews, total] = await Promise.all([
       Review.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit),
 
       Review.countDocuments(filter),
     ]);
 
-    return {
+    const data = {
       items: reviews,
       page,
       limit,
       total,
       totalPages: Math.ceil(total / limit),
     };
+
+    await reviewsCacheService.set("getReviews", cacheParams, data);
+
+    return data;
   },
 
   async getReviewById(id) {
-    return await Review.findById(id);
+    const cacheParams = { id }
+    const cachedData = await reviewsCacheService.get("getReviewById", cacheParams);
+    if(cachedData) return cachedData;
+
+    const review = await Review.findById(id);
+    if(review) await reviewsCacheService.set("getReviewById", cacheParams, review);
+    return review;
   },
 
   async updateReview(id, payload, userId) {
@@ -93,7 +118,6 @@ module.exports = {
       updateFields.comment = payload.comment;
     }
 
-    console.log(updateFields);
     if (Object.keys(updateFields).length === 0) {
       throw new ValidationError("Nothing to update");
     }
@@ -108,11 +132,14 @@ module.exports = {
       throw new ForbiddenError("You cannot update this review");
     }
 
+    await reviewsCacheService.invalidateForNamespace("getReviews");
+    await reviewsCacheService.invalidate("getReviewById", { id });
+
     return updatedReview;
   },
 
   async deleteReview(id, userId) {
-    const deletedReview = await Review.findByIdAndDelete({
+    const deletedReview = await Review.findOneAndDelete({
       _id: id,
       userId: userId,
     });
@@ -120,6 +147,9 @@ module.exports = {
     if (!deletedReview) {
       throw new ForbiddenError();
     }
+
+    await reviewsCacheService.invalidateForNamespace("getReviews");
+    await reviewsCacheService.invalidate("getReviewById", { id });
 
     return deletedReview;
   },

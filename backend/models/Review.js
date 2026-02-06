@@ -15,7 +15,7 @@ const reviewSchema = new mongoose.Schema(
     },
     rating: {
       type: Number,
-      // TODO: need change rating criteria
+      // TODO: add more in rating criteria
       min: 1,
       max: 5,
       required: true,
