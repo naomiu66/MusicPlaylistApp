@@ -36,7 +36,23 @@ const getOtherProfile = async (req, res) => {
   }
 };
 
+const getUsers = async (req, res) => {
+  try {
+    const params = {
+      page: req.query.page,
+      limit: req.query.limit,
+      search: req.query.limit,
+    }
+    const data = await usersService.getUsers(params);
+    return res.json(data);
+  } catch (err) {
+    console.error("Failed to fetch users");
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
 module.exports = {
   getProfile,
   getOtherProfile,
+  getUsers
 };

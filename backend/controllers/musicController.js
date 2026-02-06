@@ -14,7 +14,7 @@ module.exports = {
       if (!query.track)
         return res
           .status(400)
-          .json({ message: "Required params are not provided" });
+          .json({ message: "Required query params are not provided" });
 
       const data = await musicService.getTracks(query);
 
@@ -41,7 +41,7 @@ module.exports = {
       if ((!query.track || !query.artist) && !query.mbid) {
         return res
           .status(400)
-          .json({ message: "Required params are not provided" });
+          .json({ message: "Required query params are not provided" });
       }
 
       const data = await musicService.getTrackInfo(query);
@@ -69,7 +69,7 @@ module.exports = {
       if (!query.artist)
         return res
           .status(400)
-          .json({ message: "Required params are not provided" });
+          .json({ message: "Required query params are not provided" });
 
       const data = await musicService.getArtists(query);
       return res.json(data);
@@ -95,7 +95,7 @@ module.exports = {
       if (!query.album)
         return res
           .status(400)
-          .json({ message: "Required params are not provided" });
+          .json({ message: "Required query params are not provided" });
 
       const data = await musicService.getAlbums(query);
 
@@ -125,7 +125,7 @@ module.exports = {
       if ((!query.album || !query.artist) && !query.mbid)
         return res
           .status(400)
-          .json({ message: "Required params are not provided" });
+          .json({ message: "Required query params are not provided" });
 
       const data = await musicService.getAlbumInfo(query);
 
