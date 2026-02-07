@@ -2,6 +2,7 @@ const Review = require("../models/Review");
 const ValidationError = require("../errors/ValidationError");
 const ForbiddenError = require("../errors/ForbiddenError");
 const CacheService = require("./cacheService");
+const ConflictError = require("../errors/ConflictError");
 
 const TTL = 60 * 15;
 const reviewsCacheService = new CacheService("reviews:", TTL);
@@ -31,9 +32,20 @@ module.exports = {
       throw new ValidationError("Rating must be a number between 1 and 5");
     }
 
-    const review = await Review.create(payload);
-    if(review) await reviewsCacheService.invalidateForNamespace("getReviews");
-    return review;
+    try {
+      const review = await Review.create(payload);
+      if (review)
+        await reviewsCacheService.invalidateForNamespace("getReviews");
+      return review;
+    } catch (err) {
+      if (err.code === 11000) {
+        throw new ConflictError(
+          "You have already created a review for this release",
+        );
+      }
+
+      throw err;
+    }
   },
 
   async getReviews(params) {
@@ -69,7 +81,7 @@ module.exports = {
     };
 
     const cachedData = await reviewsCacheService.get("getReviews", cacheParams);
-    if(cachedData) return cachedData;
+    if (cachedData) return cachedData;
 
     const [reviews, total] = await Promise.all([
       Review.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit),
@@ -91,12 +103,16 @@ module.exports = {
   },
 
   async getReviewById(id) {
-    const cacheParams = { id }
-    const cachedData = await reviewsCacheService.get("getReviewById", cacheParams);
-    if(cachedData) return cachedData;
+    const cacheParams = { id };
+    const cachedData = await reviewsCacheService.get(
+      "getReviewById",
+      cacheParams,
+    );
+    if (cachedData) return cachedData;
 
     const review = await Review.findById(id);
-    if(review) await reviewsCacheService.set("getReviewById", cacheParams, review);
+    if (review)
+      await reviewsCacheService.set("getReviewById", cacheParams, review);
     return review;
   },
 

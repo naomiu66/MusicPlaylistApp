@@ -1,6 +1,7 @@
 const reviewsService = require("../services/reviewsService");
 const ValidationError = require("../errors/ValidationError");
 const ForbiddenError = require("../errors/ForbiddenError");
+const ConflictError = require("../errors/ConflictError");
 
 module.exports = {
   async createReview(req, res) {
@@ -12,6 +13,9 @@ module.exports = {
       console.error("Failed to create review", err);
       if (err instanceof ValidationError) {
         return res.status(400).json({ message: err.message });
+      }
+      if (err instanceof ConflictError) {
+        return res.status(409).json({ message: err.message });
       }
       return res.status(500).json({ message: "Internal server error" });
     }
@@ -29,8 +33,8 @@ module.exports = {
       const data = await reviewsService.getReviews(params);
       return res.json(data);
     } catch (err) {
-      if(err instanceof ValidationError){
-        return res.status(400).json({message: err.message});
+      if (err instanceof ValidationError) {
+        return res.status(400).json({ message: err.message });
       }
 
       console.error("Failed to fetch reviews", err);
@@ -94,7 +98,7 @@ module.exports = {
 
       if (!deletedData) return res.status(404).json({ message: "Not found" });
 
-      return res.status(204).json({message: "Successfully deleted"});
+      return res.status(204).json({ message: "Successfully deleted" });
     } catch (err) {
       console.error("Failed to delete review", err);
       if (err instanceof ForbiddenError) {
