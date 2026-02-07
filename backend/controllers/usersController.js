@@ -26,7 +26,6 @@ const getOtherProfile = async (req, res) => {
     return res.status(200).json({
       id: user._id,
       name: user.name,
-      email: user.email,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     });
