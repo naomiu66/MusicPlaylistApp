@@ -41,7 +41,7 @@ const getUsers = async (req, res) => {
     const params = {
       page: req.query.page,
       limit: req.query.limit,
-      search: req.query.limit,
+      search: req.query.search,
     }
     const data = await usersService.getUsers(params);
     return res.json(data);

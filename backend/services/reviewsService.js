@@ -31,8 +31,9 @@ module.exports = {
       throw new ValidationError("Rating must be a number between 1 and 5");
     }
 
-    await reviewsCacheService.invalidateForNamespace("getReviews");
-    return await Review.create(payload);
+    const review = await Review.create(payload);
+    if(review) await reviewsCacheService.invalidateForNamespace("getReviews");
+    return review;
   },
 
   async getReviews(params) {

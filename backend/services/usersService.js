@@ -1,7 +1,13 @@
 const User = require("../models/User");
+const CacheService = require("./cacheService");
+const TTL = 60 * 15;
+
+const usersCacheService = new CacheService("users:", TTL);
 
 const createUser = async (name, email, password) => {
-  return await User.create({ name, email, password });
+  const user = await User.create({ name, email, password });
+  await usersCacheService.invalidateForNamespace("getUsers");
+  return user;
 };
 
 const getUsers = async (params) => {
@@ -15,46 +21,73 @@ const getUsers = async (params) => {
   const filter = {};
 
   if (search) {
-    filter.$or = [
-      { username: { $regex: search, $options: "i" } },
-    ];
+    filter.$or = [{ name: { $regex: search, $options: "i" } }];
   }
 
+  const cacheParams = {
+    page,
+    limit,
+    search,
+  };
+
+  const cachedData = await usersCacheService.get("getUsers", cacheParams);
+  if (cachedData) return cachedData;
+
   const [users, total] = await Promise.all([
-    User.find(filter)
-      .select("name createdAt")
-      .skip(skip)
-      .limit(limit),
+    User.find(filter).select("name createdAt").skip(skip).limit(limit),
     User.countDocuments(filter),
   ]);
 
-  return {
+  const data = {
     items: users,
     page,
     limit,
     total,
     totalPages: Math.ceil(total / limit),
   };
+
+  await usersCacheService.set("getUsers", cacheParams, data);
+
+  return data;
 };
 
 const getUserById = async (id) => {
-  return await User.findById(id);
+  const cacheParams = { id };
+  const cachedData = await usersCacheService.get("getUserById", cacheParams);
+  if (cachedData) return cachedData;
+
+  const user = await User.findById(id);
+  if (user) usersCacheService.set("getUserById", cacheParams, user);
+
+  return user;
 };
 
 const getUserByEmail = async (email) => {
-  return await User.findOne({ email });
+  const user = await User.findOne({ email });
+  return user;
 };
 
 const updateUser = async (id, name, email, password) => {
-  return await User.findByIdAndUpdate(
+  const user = await User.findByIdAndUpdate(
     id,
     { name, email, password, updatedAt: Date.now() },
     { new: true },
   );
+
+  if (user) {
+    await usersCacheService.invalidateForNamespace("getUsers");
+    await usersCacheService.invalidate("getUserById", { id });
+  }
+  return user;
 };
 
 const deleteUser = async (id) => {
-  return await User.findByIdAndDelete(id);
+  const user = await User.findByIdAndDelete(id);
+  if (user) {
+    await usersCacheService.invalidateForNamespace("getUsers");
+    await usersCacheService.invalidate("getUserById", { id });
+  }
+  return user;
 };
 
 module.exports = {
